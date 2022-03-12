@@ -4,9 +4,110 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa myśli</title>
+    <title>MindMap</title>
 </head>
 <body>
-    Under development...
+    <div id="mindmap" style="position: relative; border: 1px solid grey; min-height: 480px; min-width: 480px;">
+        <canvas id="myCanvas" width="480" height="480"/>
+    </div>
+    <pre id="kodDanych" style="overflow: auto; max-height: 366px;"></pre>
+    <script>
+        var api = 'GET https://gski.thedev.id/projekt_mapa_myśli/api/minds?format=json'
+        function wczytajDane(onOk, onErr) {
+            function reqListener() {
+                console.log(this.responseText);
+            }
+            var xhr = new XMLHttpRequest();
+            xhr.addEventListener("load", onOk || reqListener);
+            xhr.addEventListener('error', onError);
+            xhr.open("GET", api + "/minds");
+            xhr.send();
+        }
+        var fixturesFromDjango = [{
+                parentId: null,
+                id: 1,
+                depth_level: 0,
+                position_x: 40,
+                position_y: 100,
+                description: 'tematyka JavaScript'
+            },
+            {
+                parentId: 1,
+                id: 2,
+                depth_level: 1,
+                position_x: 200,
+                position_y: 100,
+                description: 'ES2015'
+            },
+            {
+                parentId: 1,
+                id: 3,
+                depth_level: 1,
+                position_x: 200,
+                position_y: 125,
+                description: 'Pytania na rozmowy'
+            },
+            {
+                parentId: 1,
+                id: 4,
+                depth_level: 1,
+                position_x: 200,
+                position_y: 125 + 25,
+                description: 'Opisy zrealizowanych projektów'
+            },
+        ]
+        var data = new Promise((res, err) => wczytajDane(res, err))
+        var dataPromise = new Promise((res, err) => {
+            data.then(res).catch(() => {
+                res(fixturesFromDjango)
+            })
+        })
+        function rysujElementy(start) {
+            function stworzDiv(x, y, tekst) {
+                var el = document.createElement('div')
+                el.style.border='1px solid black'
+                el.style.position='absolute'
+                el.style.top = y + 'px'
+                el.style.left = x + 'px'
+                el.textContent = tekst
+                return el
+            }
+            // start.innerHTML = '<canvas id="myCanvas"/>' // reset POPRAWIĆ
+            dataPromise.then(elements => {
+                elements.map((e, id) => {
+                    start.appendChild(stworzDiv(e.position_x, e.position_y, e.description))
+                })
+                dodajPołączenia(elements)
+                document.getElementById('kodDanych').innerHTML = JSON.stringify(elements, null, 4)
+            })
+        }
+        function dodajPołączenia(data, ctxElement) {
+            var c = ctxElement || document.getElementById("myCanvas");
+            var ctx = c.getContext("2d");
+            
+            /**
+             * Instrukcja jak rysować po canvasie
+             * ctx.beginPath();
+             * ctx.moveTo(0, 0);
+             * ctx.lineTo(300, 150);
+             * ctx.stroke();
+             * 
+             * Źródło: dokumentacja WWW twórców przeglądarki
+            **/
+            function dodajPołączenie([x1, y1], [x2, y2], [dx1, dy1] = [0, 0], [dx2, dy2] = [0, 0]) {
+                ctx.beginPath();
+                ctx.moveTo(x1 + dx1, y1 + dy1);
+                ctx.lineTo(x2 + dx2, y2 + dy2);
+                ctx.stroke();
+            }
+            var node0 = data.find(e => e.parentId === null)
+            var initPos = [node0.position_x, node0.position_y]
+            var level1Nodes = data.filter(node => node.depth_level === 1)
+            level1Nodes.forEach(node => {
+                dodajPołączenie(initPos, [node.position_x, node.position_y], [132, 10], [0, 10])
+            })
+        }
+        rysujElementy(document.getElementById('mindmap'))
+    </script>
 </body>
 </html>
